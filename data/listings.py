@@ -26,7 +26,7 @@ class ListingStore:
     def _initialize_database(self):
         with self._get_connection() as connection:
             self._create_table(connection)
-            self._migrate_price_column_if_needed(connection)
+            self._migrate_schema_if_needed(connection)
 
             row_count = connection.execute(
                 "SELECT COUNT(*) FROM listings"
@@ -46,25 +46,35 @@ class ListingStore:
                 city TEXT NOT NULL,
                 country TEXT NOT NULL,
                 price REAL NULL,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'FOR SALE'
+                    CHECK(status IN ('FOR SALE', 'SOLD')),
                 note TEXT NOT NULL DEFAULT '',
-                recent INTEGER NOT NULL DEFAULT 0
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
 
-    def _migrate_price_column_if_needed(self, connection):
+    def _migrate_schema_if_needed(self, connection):
         columns = connection.execute("PRAGMA table_info(listings)").fetchall()
+        column_names = {column[1] for column in columns}
         price_column = next((column for column in columns if column[1] == "price"), None)
+        needs_migration = (
+            not price_column
+            or price_column[2].upper() != "REAL"
+            or "recent" in column_names
+            or "updated_at" not in column_names
+        )
 
-        if not price_column or price_column[2].upper() == "REAL":
+        if not needs_migration:
             return
 
-        logger.info("Migrating listings.price from TEXT to REAL")
+        logger.info("Migrating listings schema to the current version")
         self._create_table(connection, table_name="listings_new")
         connection.execute(
             """
-            INSERT INTO listings_new (id, address, city, country, price, status, note, recent)
+            INSERT INTO listings_new (
+                id, address, city, country, price, status, note, updated_at
+            )
             SELECT
                 id,
                 address,
@@ -74,15 +84,18 @@ class ListingStore:
                     WHEN TRIM(COALESCE(price, '')) = '' THEN NULL
                     ELSE CAST(price AS REAL)
                 END,
-                status,
+                CASE
+                    WHEN status IN ('FOR SALE', 'SOLD') THEN status
+                    ELSE 'FOR SALE'
+                END,
                 note,
-                recent
+                CURRENT_TIMESTAMP
             FROM listings
             """
         )
         connection.execute("DROP TABLE listings")
         connection.execute("ALTER TABLE listings_new RENAME TO listings")
-        logger.info("Price column migration completed")
+        logger.info("Listings schema migration completed")
 
     def _normalize_price(self, raw_value):
         if raw_value in (None, ""):
@@ -108,33 +121,31 @@ class ListingStore:
             "price": self._display_price(row["price"]),
             "status": row["status"],
             "note": row["note"],
-            "recent": bool(row["recent"]),
+            "updated_at": row["updated_at"],
         }
 
     def fetch_all(self):
         with self._get_connection() as connection:
             rows = connection.execute(
                 """
-                SELECT id, address, city, country, price, status, note, recent
+                SELECT id, address, city, country, price, status, note, updated_at
                 FROM listings
                 ORDER BY id
                 """
             ).fetchall()
         return [self._row_to_listing(row) for row in rows]
 
-    def clear_recent_flags(self):
-        with self._get_connection() as connection:
-            connection.execute("UPDATE listings SET recent = 0")
-
     def find_listing(self, keyword, prefer_status=None):
         term = f"%{keyword.lower().strip()}%"
         query = """
-            SELECT id, address, city, country, price, status, note, recent
+            SELECT id, address, city, country, price, status, note, updated_at
             FROM listings
-            WHERE LOWER(address) LIKE ?
-               OR LOWER(city) LIKE ?
-               OR LOWER(country) LIKE ?
-               OR LOWER(note) LIKE ?
+            WHERE (
+                LOWER(address) LIKE ?
+                OR LOWER(city) LIKE ?
+                OR LOWER(country) LIKE ?
+                OR LOWER(note) LIKE ?
+            )
         """
         params = [term, term, term, term]
 
@@ -158,7 +169,7 @@ class ListingStore:
         with self._get_connection() as connection:
             row = connection.execute(
                 """
-                SELECT id, address, city, country, price, status, note, recent
+                SELECT id, address, city, country, price, status, note, updated_at
                 FROM listings
                 WHERE id = ?
                 """,
@@ -172,7 +183,7 @@ class ListingStore:
         with self._get_connection() as connection:
             rows = connection.execute(
                 """
-                SELECT id, address, city, country, price, status, note, recent
+                SELECT id, address, city, country, price, status, note, updated_at
                 FROM listings
                 WHERE LOWER(address) LIKE ?
                    OR LOWER(city) LIKE ?
@@ -187,12 +198,13 @@ class ListingStore:
         return [self._row_to_listing(row) for row in rows]
 
     def add_listing(self, parts):
-        self.clear_recent_flags()
         with self._get_connection() as connection:
             cursor = connection.execute(
                 """
-                INSERT INTO listings (address, city, country, price, status, note, recent)
-                VALUES (?, ?, ?, ?, 'FOR SALE', ?, 1)
+                INSERT INTO listings (
+                    address, city, country, price, status, note, updated_at
+                )
+                VALUES (?, ?, ?, ?, 'FOR SALE', ?, CURRENT_TIMESTAMP)
                 """,
                 (
                     parts[0],
@@ -212,10 +224,13 @@ class ListingStore:
         if not item:
             return None
 
-        self.clear_recent_flags()
         with self._get_connection() as connection:
             connection.execute(
-                "UPDATE listings SET status = 'SOLD', recent = 1 WHERE id = ?",
+                """
+                UPDATE listings
+                SET status = 'SOLD', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
                 (item["id"],),
             )
         logger.info("Marked listing #%s as SOLD", item["id"])
@@ -227,10 +242,13 @@ class ListingStore:
         if not item:
             return None
 
-        self.clear_recent_flags()
         with self._get_connection() as connection:
             connection.execute(
-                "UPDATE listings SET status = 'FOR SALE', recent = 1 WHERE id = ?",
+                """
+                UPDATE listings
+                SET status = 'FOR SALE', updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
                 (item["id"],),
             )
         logger.info("Marked listing #%s as FOR SALE", item["id"])

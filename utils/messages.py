@@ -14,8 +14,6 @@ def build_listing_line(item):
         price = item["price"] if item["price"] else "?"
         meta.append(f"FOR SALE · $ {price}")
 
-    if item["recent"]:
-        meta.append("`RECENT`")
     if item["note"]:
         meta.append(item["note"])
 
