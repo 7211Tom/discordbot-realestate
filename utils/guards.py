@@ -1,4 +1,12 @@
-from config import OWNER_DISCORD_ID
+from config import ALLOWED_CHANNEL_NAME, OWNER_DISCORD_ID
+
+
+def is_allowed_channel(ctx):
+    return getattr(ctx.channel, "name", None) == ALLOWED_CHANNEL_NAME
+
+
+async def ensure_allowed_channel(ctx):
+    return is_allowed_channel(ctx)
 
 
 def user_can_edit(ctx):

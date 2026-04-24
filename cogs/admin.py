@@ -1,7 +1,7 @@
 from discord.ext import commands
 
-from cogs.listings import send_list
-from utils.guards import ensure_editor
+from utils.guards import ensure_allowed_channel, ensure_editor
+from utils.messages import send_list
 
 
 class AdminCog(commands.Cog):
@@ -10,6 +10,9 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     async def add(self, ctx, *, text):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         if not await ensure_editor(ctx):
             return
 
@@ -31,6 +34,9 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     async def sold(self, ctx, *, keyword):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         if not await ensure_editor(ctx):
             return
 
@@ -45,6 +51,9 @@ class AdminCog(commands.Cog):
 
     @commands.command()
     async def forsale(self, ctx, *, keyword):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         if not await ensure_editor(ctx):
             return
 
@@ -59,6 +68,9 @@ class AdminCog(commands.Cog):
 
     @commands.command(name="remove")
     async def remove_listing(self, ctx, listing_id: str):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         if not await ensure_editor(ctx):
             return
 

@@ -1,8 +1,11 @@
-import json
+import logging
 import os
 import sqlite3
 
-from config import DB_FILE, LEGACY_DATA_FILE
+from config import DB_FILE
+
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_LISTINGS = [
@@ -235,9 +238,8 @@ DEFAULT_LISTINGS = [
 
 
 class ListingStore:
-    def __init__(self, db_file=DB_FILE, legacy_file=LEGACY_DATA_FILE):
+    def __init__(self, db_file=DB_FILE):
         self.db_file = db_file
-        self.legacy_file = legacy_file
         os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
         self._initialize_database()
 
@@ -271,17 +273,12 @@ class ListingStore:
                 "SELECT COUNT(*) FROM listings"
             ).fetchone()[0]
             if row_count:
+                logger.info("SQLite database loaded with %s listings", row_count)
                 return
 
-            seed_items = self._load_seed_items()
+            seed_items = self._normalize_seed_items(DEFAULT_LISTINGS)
             self._insert_many(connection, seed_items)
-
-    def _load_seed_items(self):
-        if os.path.exists(self.legacy_file):
-            with open(self.legacy_file, encoding="utf-8") as data_file:
-                return self._normalize_seed_items(json.load(data_file))
-
-        return self._normalize_seed_items(DEFAULT_LISTINGS)
+            logger.info("SQLite database initialized with %s default listings", len(seed_items))
 
     def _normalize_seed_items(self, items):
         normalized = []
@@ -337,27 +334,27 @@ class ListingStore:
             connection.execute("UPDATE listings SET recent = 0")
 
     def find_listing(self, keyword, prefer_status=None):
-        keyword = keyword.lower().strip()
-        matches = []
-
-        for item in self.fetch_all():
-            haystack = " | ".join(
-                [
-                    item["address"],
-                    item["city"],
-                    item["country"],
-                    item["note"],
-                ]
-            ).lower()
-            if keyword in haystack:
-                matches.append(item)
+        term = f"%{keyword.lower().strip()}%"
+        query = """
+            SELECT id, address, city, country, price, status, note, recent
+            FROM listings
+            WHERE LOWER(address) LIKE ?
+               OR LOWER(city) LIKE ?
+               OR LOWER(country) LIKE ?
+               OR LOWER(note) LIKE ?
+        """
+        params = [term, term, term, term]
 
         if prefer_status:
-            preferred = [item for item in matches if item["status"] == prefer_status]
-            if preferred:
-                return preferred[0]
+            query += " AND status = ?"
+            params.append(prefer_status)
 
-        return matches[0] if matches else None
+        query += " ORDER BY id LIMIT 1"
+
+        with self._get_connection() as connection:
+            row = connection.execute(query, tuple(params)).fetchone()
+
+        return self._row_to_listing(row) if row else None
 
     def find_listing_by_id(self, raw_value):
         try:
@@ -413,6 +410,7 @@ class ListingStore:
                 ),
             )
             listing_id = cursor.lastrowid
+        logger.info("Added listing #%s: %s", listing_id, parts[0])
 
         return self.find_listing_by_id(listing_id)
 
@@ -427,6 +425,7 @@ class ListingStore:
                 "UPDATE listings SET status = 'SOLD', recent = 1 WHERE id = ?",
                 (item["id"],),
             )
+        logger.info("Marked listing #%s as SOLD", item["id"])
 
         return self.find_listing_by_id(item["id"])
 
@@ -441,6 +440,7 @@ class ListingStore:
                 "UPDATE listings SET status = 'FOR SALE', recent = 1 WHERE id = ?",
                 (item["id"],),
             )
+        logger.info("Marked listing #%s as FOR SALE", item["id"])
 
         return self.find_listing_by_id(item["id"])
 
@@ -451,5 +451,6 @@ class ListingStore:
 
         with self._get_connection() as connection:
             connection.execute("DELETE FROM listings WHERE id = ?", (item["id"],))
+        logger.info("Removed listing #%s: %s", item["id"], item["address"])
 
         return item

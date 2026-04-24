@@ -1,36 +1,7 @@
 from discord.ext import commands
 
-
-def build_listing_line(item):
-    emoji = "❌" if item["status"] == "SOLD" else "✅"
-    location = ", ".join(
-        part for part in [item["city"].strip(), item["country"].strip()] if part
-    )
-
-    meta = []
-    if item["status"] == "SOLD":
-        meta.append("SOLD")
-    else:
-        price = item["price"] if item["price"] else "?"
-        meta.append(f"FOR SALE · $ {price}")
-
-    if item["recent"]:
-        meta.append("`RECENT`")
-    if item["note"]:
-        meta.append(item["note"])
-
-    return f"`#{item['id']}` {emoji} {item['address']} · {location} - {' | '.join(meta)}"
-
-
-async def send_list(ctx, items_to_show=None):
-    items = items_to_show if items_to_show is not None else ctx.bot.store.listings
-
-    if not items:
-        await ctx.send("Lijst is leeg.")
-        return
-
-    message = "UPDATE\n" + "\n".join(build_listing_line(item) for item in items)
-    await ctx.send(message)
+from utils.guards import ensure_allowed_channel
+from utils.messages import send_list
 
 
 class ListingsCog(commands.Cog):
@@ -39,10 +10,16 @@ class ListingsCog(commands.Cog):
 
     @commands.command(name="list")
     async def list_command(self, ctx):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         await send_list(ctx)
 
     @commands.command()
     async def search(self, ctx, *, keyword):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         results = self.bot.store.search(keyword)
 
         if not results:
@@ -53,6 +30,9 @@ class ListingsCog(commands.Cog):
 
     @commands.command()
     async def helpme(self, ctx):
+        if not await ensure_allowed_channel(ctx):
+            return
+
         help_text = (
             "!list\n"
             "!sold <zoekwoord>\n"

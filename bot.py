@@ -55,4 +55,4 @@ async def on_ready():
     logger.info("Allowed channel is %s", ALLOWED_CHANNEL_NAME)
 
 
-bot.run(TOKEN)
+bot.run(TOKEN, log_handler=None)

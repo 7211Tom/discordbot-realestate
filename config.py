@@ -26,7 +26,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OWNER_DISCORD_ID = os.getenv("OWNER_DISCORD_ID")
-LEGACY_DATA_FILE = os.path.join(BASE_DIR, "listings.json")
+ALLOWED_CHANNEL_NAME = os.getenv("ALLOWED_CHANNEL_NAME", "for-sale💰").strip()
 DB_FILE = os.path.join(DATA_DIR, "listings.db")
 
 if not TOKEN:
