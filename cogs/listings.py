@@ -1,3 +1,5 @@
+import discord
+from discord import app_commands
 from discord.ext import commands
 
 from utils.guards import is_allowed_channel
@@ -42,6 +44,24 @@ class ListingsCog(commands.Cog):
             "!add adres | stad | land | prijs | optionele notitie"
         )
         await ctx.send(f"```{help_text}```")
+
+    @app_commands.command(
+        name="commands",
+        description="Toont een overzicht van alle beschikbare bot-commands.",
+    )
+    async def commands_overview(self, interaction: discord.Interaction):
+        help_text = (
+            "!list\n"
+            "!sold <zoekwoord>\n"
+            "!forsale <zoekwoord>\n"
+            "!remove <id>\n"
+            "!search <zoekwoord>\n"
+            "!add adres | stad | land | prijs | optionele notitie"
+        )
+        await interaction.response.send_message(
+            f"```{help_text}```",
+            ephemeral=True,
+        )
 
 
 async def setup(bot):

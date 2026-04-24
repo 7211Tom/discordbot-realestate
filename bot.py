@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 import discord
 from discord.ext import commands
 
-from config import ALLOWED_CHANNEL_NAME, DB_FILE, TOKEN
+from config import ALLOWED_CHANNEL_NAME, DB_FILE, GUILD_ID, TOKEN
 from data.listings import ListingStore
 
 
@@ -43,6 +43,20 @@ class RealEstateBot(commands.Bot):
         logger.info("Loading extensions")
         await self.load_extension("cogs.listings")
         await self.load_extension("cogs.admin")
+
+        if GUILD_ID:
+            guild = discord.Object(id=int(GUILD_ID))
+            self.tree.copy_global_to(guild=guild)
+            synced_commands = await self.tree.sync(guild=guild)
+            logger.info(
+                "Synced %s application commands for guild %s",
+                len(synced_commands),
+                GUILD_ID,
+            )
+        else:
+            synced_commands = await self.tree.sync()
+            logger.info("Synced %s global application commands", len(synced_commands))
+
         logger.info("Extensions loaded successfully")
 
     async def on_command_error(self, ctx, error):
