@@ -5,10 +5,6 @@ def is_allowed_channel(ctx):
     return getattr(ctx.channel, "name", None) == ALLOWED_CHANNEL_NAME
 
 
-async def ensure_allowed_channel(ctx):
-    return is_allowed_channel(ctx)
-
-
 def user_can_edit(ctx):
     if not OWNER_DISCORD_ID:
         return False

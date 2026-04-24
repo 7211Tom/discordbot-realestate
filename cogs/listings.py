@@ -1,6 +1,6 @@
 from discord.ext import commands
 
-from utils.guards import ensure_allowed_channel
+from utils.guards import is_allowed_channel
 from utils.messages import send_list
 
 
@@ -10,14 +10,14 @@ class ListingsCog(commands.Cog):
 
     @commands.command(name="list")
     async def list_command(self, ctx):
-        if not await ensure_allowed_channel(ctx):
+        if not is_allowed_channel(ctx):
             return
 
         await send_list(ctx)
 
     @commands.command()
     async def search(self, ctx, *, keyword):
-        if not await ensure_allowed_channel(ctx):
+        if not is_allowed_channel(ctx):
             return
 
         results = self.bot.store.search(keyword)
@@ -30,7 +30,7 @@ class ListingsCog(commands.Cog):
 
     @commands.command()
     async def helpme(self, ctx):
-        if not await ensure_allowed_channel(ctx):
+        if not is_allowed_channel(ctx):
             return
 
         help_text = (
