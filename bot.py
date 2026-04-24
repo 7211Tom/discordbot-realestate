@@ -45,6 +45,25 @@ class RealEstateBot(commands.Bot):
         await self.load_extension("cogs.admin")
         logger.info("Extensions loaded successfully")
 
+    async def on_command_error(self, ctx, error):
+        if hasattr(ctx.command, "on_error"):
+            return
+
+        if isinstance(error, commands.CommandNotFound):
+            return
+
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("Er ontbreekt invoer voor dit commando. Gebruik !helpme voor hulp.")
+            return
+
+        if isinstance(error, commands.BadArgument):
+            await ctx.send("Ongeldige invoer voor dit commando. Gebruik !helpme voor het juiste formaat.")
+            return
+
+        original = getattr(error, "original", error)
+        logger.exception("Unhandled command error in %s", ctx.command, exc_info=original)
+        await ctx.send("Er ging iets mis bij het uitvoeren van dit commando. Probeer het opnieuw.")
+
 
 bot = RealEstateBot()
 

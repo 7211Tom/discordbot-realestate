@@ -1,4 +1,12 @@
 MAX_MESSAGE_LENGTH = 1900
+MAX_LINE_LENGTH = 400
+
+
+def truncate_text(text, limit):
+    if len(text) <= limit:
+        return text
+
+    return f"{text[: limit - 3].rstrip()}..."
 
 
 def build_listing_line(item):
@@ -17,7 +25,8 @@ def build_listing_line(item):
     if item["note"]:
         meta.append(item["note"])
 
-    return f"`#{item['id']}` {emoji} {item['address']} · {location} - {' | '.join(meta)}"
+    line = f"`#{item['id']}` {emoji} {item['address']} · {location} - {' | '.join(meta)}"
+    return truncate_text(line, MAX_LINE_LENGTH)
 
 
 async def send_list(ctx, items_to_show=None):
@@ -38,7 +47,8 @@ async def send_list(ctx, items_to_show=None):
             current_chunk = candidate
             continue
 
-        chunks.append(current_chunk)
+        if current_chunk != "UPDATE":
+            chunks.append(current_chunk)
         current_chunk = f"UPDATE\n{line}"
 
     if current_chunk:

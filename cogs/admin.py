@@ -27,7 +27,13 @@ class AdminCog(commands.Cog):
             )
             return
 
-        listing = self.bot.store.add_listing(parts)
+        try:
+            listing = self.bot.store.add_listing(parts)
+        except ValueError:
+            await ctx.send(
+                "Ongeldige prijs. Gebruik alleen cijfers, bijvoorbeeld 250000 of 250000.50."
+            )
+            return
 
         await ctx.send(f"Toegevoegd: #{listing['id']} {listing['address']}")
         await send_list(ctx)
