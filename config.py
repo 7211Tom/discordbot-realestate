@@ -22,9 +22,12 @@ def load_dotenv(path=".env"):
 
 load_dotenv()
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OWNER_DISCORD_ID = os.getenv("OWNER_DISCORD_ID")
-DATA_FILE = "listings.json"
+LEGACY_DATA_FILE = os.path.join(BASE_DIR, "listings.json")
+DB_FILE = os.path.join(DATA_DIR, "listings.db")
 
 if not TOKEN:
     raise RuntimeError(

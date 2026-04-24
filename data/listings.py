@@ -1,7 +1,8 @@
 import json
 import os
+import sqlite3
 
-from config import DATA_FILE
+from config import DB_FILE, LEGACY_DATA_FILE
 
 
 DEFAULT_LISTINGS = [
@@ -234,56 +235,112 @@ DEFAULT_LISTINGS = [
 
 
 class ListingStore:
-    def __init__(self, data_file=DATA_FILE):
-        self.data_file = data_file
-        self.listings = self.load_listings()
-        self.refresh_ids()
+    def __init__(self, db_file=DB_FILE, legacy_file=LEGACY_DATA_FILE):
+        self.db_file = db_file
+        self.legacy_file = legacy_file
+        os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+        self._initialize_database()
 
-    def normalize_listings(self, items):
+    @property
+    def listings(self):
+        return self.fetch_all()
+
+    def _get_connection(self):
+        connection = sqlite3.connect(self.db_file)
+        connection.row_factory = sqlite3.Row
+        return connection
+
+    def _initialize_database(self):
+        with self._get_connection() as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS listings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    address TEXT NOT NULL,
+                    city TEXT NOT NULL,
+                    country TEXT NOT NULL,
+                    price TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL,
+                    note TEXT NOT NULL DEFAULT '',
+                    recent INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+
+            row_count = connection.execute(
+                "SELECT COUNT(*) FROM listings"
+            ).fetchone()[0]
+            if row_count:
+                return
+
+            seed_items = self._load_seed_items()
+            self._insert_many(connection, seed_items)
+
+    def _load_seed_items(self):
+        if os.path.exists(self.legacy_file):
+            with open(self.legacy_file, encoding="utf-8") as data_file:
+                return self._normalize_seed_items(json.load(data_file))
+
+        return self._normalize_seed_items(DEFAULT_LISTINGS)
+
+    def _normalize_seed_items(self, items):
         normalized = []
         for index, item in enumerate(items, start=1):
-            normalized_item = {
-                "address": item.get("address", "").strip(),
-                "city": item.get("city", "").strip(),
-                "country": item.get("country", "").strip(),
-                "price": str(item.get("price", "")).strip(),
-                "status": item.get("status", "FOR SALE").strip().upper(),
-                "note": item.get("note", "").strip(),
-                "recent": bool(item.get("recent", False)),
-                "id": index,
-            }
-            normalized.append(normalized_item)
-
+            normalized.append(
+                {
+                    "id": int(item.get("id", index)),
+                    "address": item.get("address", "").strip(),
+                    "city": item.get("city", "").strip(),
+                    "country": item.get("country", "").strip(),
+                    "price": str(item.get("price", "")).strip(),
+                    "status": item.get("status", "FOR SALE").strip().upper(),
+                    "note": item.get("note", "").strip(),
+                    "recent": 1 if item.get("recent", False) else 0,
+                }
+            )
         return normalized
 
-    def save_listings(self):
-        with open(self.data_file, "w", encoding="utf-8") as data_file:
-            json.dump(self.listings, data_file, ensure_ascii=False, indent=2)
+    def _insert_many(self, connection, items):
+        connection.executemany(
+            """
+            INSERT INTO listings (id, address, city, country, price, status, note, recent)
+            VALUES (:id, :address, :city, :country, :price, :status, :note, :recent)
+            """,
+            items,
+        )
 
-    def load_listings(self):
-        if os.path.exists(self.data_file):
-            with open(self.data_file, encoding="utf-8") as data_file:
-                loaded = json.load(data_file)
-            return self.normalize_listings(loaded)
+    def _row_to_listing(self, row):
+        return {
+            "id": row["id"],
+            "address": row["address"],
+            "city": row["city"],
+            "country": row["country"],
+            "price": row["price"],
+            "status": row["status"],
+            "note": row["note"],
+            "recent": bool(row["recent"]),
+        }
 
-        loaded = self.normalize_listings(DEFAULT_LISTINGS)
-        with open(self.data_file, "w", encoding="utf-8") as data_file:
-            json.dump(loaded, data_file, ensure_ascii=False, indent=2)
-        return loaded
-
-    def refresh_ids(self):
-        for index, item in enumerate(self.listings, start=1):
-            item["id"] = index
+    def fetch_all(self):
+        with self._get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, address, city, country, price, status, note, recent
+                FROM listings
+                ORDER BY id
+                """
+            ).fetchall()
+        return [self._row_to_listing(row) for row in rows]
 
     def clear_recent_flags(self):
-        for item in self.listings:
-            item["recent"] = False
+        with self._get_connection() as connection:
+            connection.execute("UPDATE listings SET recent = 0")
 
     def find_listing(self, keyword, prefer_status=None):
         keyword = keyword.lower().strip()
-
         matches = []
-        for item in self.listings:
+
+        for item in self.fetch_all():
             haystack = " | ".join(
                 [
                     item["address"],
@@ -308,41 +365,56 @@ class ListingStore:
         except ValueError:
             return None
 
-        for item in self.listings:
-            if item["id"] == listing_id:
-                return item
+        with self._get_connection() as connection:
+            row = connection.execute(
+                """
+                SELECT id, address, city, country, price, status, note, recent
+                FROM listings
+                WHERE id = ?
+                """,
+                (listing_id,),
+            ).fetchone()
 
-        return None
+        return self._row_to_listing(row) if row else None
 
     def search(self, keyword):
-        keyword = keyword.lower().strip()
-        return [
-            item
-            for item in self.listings
-            if keyword in item["address"].lower()
-            or keyword in item["city"].lower()
-            or keyword in item["country"].lower()
-            or keyword in item["status"].lower()
-            or keyword in item["note"].lower()
-        ]
+        term = f"%{keyword.lower().strip()}%"
+        with self._get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, address, city, country, price, status, note, recent
+                FROM listings
+                WHERE LOWER(address) LIKE ?
+                   OR LOWER(city) LIKE ?
+                   OR LOWER(country) LIKE ?
+                   OR LOWER(status) LIKE ?
+                   OR LOWER(note) LIKE ?
+                ORDER BY id
+                """,
+                (term, term, term, term, term),
+            ).fetchall()
+
+        return [self._row_to_listing(row) for row in rows]
 
     def add_listing(self, parts):
-        listing = {
-            "address": parts[0],
-            "city": parts[1],
-            "country": parts[2],
-            "price": parts[3],
-            "status": "FOR SALE",
-            "note": parts[4] if len(parts) > 4 else "",
-            "recent": False,
-        }
-
         self.clear_recent_flags()
-        listing["id"] = max((item["id"] for item in self.listings), default=0) + 1
-        listing["recent"] = True
-        self.listings.append(listing)
-        self.save_listings()
-        return listing
+        with self._get_connection() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO listings (address, city, country, price, status, note, recent)
+                VALUES (?, ?, ?, ?, 'FOR SALE', ?, 1)
+                """,
+                (
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parts[3],
+                    parts[4] if len(parts) > 4 else "",
+                ),
+            )
+            listing_id = cursor.lastrowid
+
+        return self.find_listing_by_id(listing_id)
 
     def mark_sold(self, keyword):
         item = self.find_listing(keyword, prefer_status="FOR SALE")
@@ -350,10 +422,13 @@ class ListingStore:
             return None
 
         self.clear_recent_flags()
-        item["status"] = "SOLD"
-        item["recent"] = True
-        self.save_listings()
-        return item
+        with self._get_connection() as connection:
+            connection.execute(
+                "UPDATE listings SET status = 'SOLD', recent = 1 WHERE id = ?",
+                (item["id"],),
+            )
+
+        return self.find_listing_by_id(item["id"])
 
     def mark_for_sale(self, keyword):
         item = self.find_listing(keyword, prefer_status="SOLD")
@@ -361,18 +436,20 @@ class ListingStore:
             return None
 
         self.clear_recent_flags()
-        item["status"] = "FOR SALE"
-        item["recent"] = True
-        self.save_listings()
-        return item
+        with self._get_connection() as connection:
+            connection.execute(
+                "UPDATE listings SET status = 'FOR SALE', recent = 1 WHERE id = ?",
+                (item["id"],),
+            )
+
+        return self.find_listing_by_id(item["id"])
 
     def remove_listing(self, listing_id):
         item = self.find_listing_by_id(listing_id)
         if not item:
             return None
 
-        self.listings.remove(item)
-        self.clear_recent_flags()
-        self.refresh_ids()
-        self.save_listings()
+        with self._get_connection() as connection:
+            connection.execute("DELETE FROM listings WHERE id = ?", (item["id"],))
+
         return item
