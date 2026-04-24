@@ -27,6 +27,7 @@ def load_dotenv(path=".env"):
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+OWNER_DISCORD_ID = os.getenv("OWNER_DISCORD_ID")
 DATA_FILE = "listings.json"
 
 if not TOKEN:
@@ -320,6 +321,27 @@ def clear_recent_flags():
         item["recent"] = False
 
 
+def user_can_edit(ctx):
+    if not OWNER_DISCORD_ID:
+        return False
+
+    return str(ctx.author.id) == OWNER_DISCORD_ID.strip()
+
+
+async def ensure_editor(ctx):
+    if user_can_edit(ctx):
+        return True
+
+    if not OWNER_DISCORD_ID:
+        await ctx.send(
+            "Schrijven staat uit. Zet OWNER_DISCORD_ID in je .env om !add, !sold, !forsale en !remove te gebruiken."
+        )
+        return False
+
+    await ctx.send("Alleen de eigenaar van deze bot mag de lijst aanpassen.")
+    return False
+
+
 def find_listing(keyword, prefer_status=None):
     keyword = keyword.lower().strip()
 
@@ -401,6 +423,9 @@ async def list_command(ctx):
 
 @bot.command()
 async def add(ctx, *, text):
+    if not await ensure_editor(ctx):
+        return
+
     if "|" in text:
         parts = [part.strip() for part in text.split("|")]
     else:
@@ -434,6 +459,9 @@ async def add(ctx, *, text):
 
 @bot.command()
 async def sold(ctx, *, keyword):
+    if not await ensure_editor(ctx):
+        return
+
     item = find_listing(keyword, prefer_status="FOR SALE")
 
     if not item:
@@ -451,6 +479,9 @@ async def sold(ctx, *, keyword):
 
 @bot.command()
 async def forsale(ctx, *, keyword):
+    if not await ensure_editor(ctx):
+        return
+
     item = find_listing(keyword, prefer_status="SOLD")
 
     if not item:
@@ -468,6 +499,9 @@ async def forsale(ctx, *, keyword):
 
 @bot.command(name="remove")
 async def remove_listing(ctx, listing_id: str):
+    if not await ensure_editor(ctx):
+        return
+
     item = find_listing_by_id(listing_id)
 
     if not item:
