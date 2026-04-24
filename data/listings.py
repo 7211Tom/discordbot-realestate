@@ -254,20 +254,8 @@ class ListingStore:
 
     def _initialize_database(self):
         with self._get_connection() as connection:
-            connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS listings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    address TEXT NOT NULL,
-                    city TEXT NOT NULL,
-                    country TEXT NOT NULL,
-                    price TEXT NOT NULL DEFAULT '',
-                    status TEXT NOT NULL,
-                    note TEXT NOT NULL DEFAULT '',
-                    recent INTEGER NOT NULL DEFAULT 0
-                )
-                """
-            )
+            self._create_table(connection)
+            self._migrate_price_column_if_needed(connection)
 
             row_count = connection.execute(
                 "SELECT COUNT(*) FROM listings"
@@ -280,6 +268,68 @@ class ListingStore:
             self._insert_many(connection, seed_items)
             logger.info("SQLite database initialized with %s default listings", len(seed_items))
 
+    def _create_table(self, connection, table_name="listings"):
+        connection.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                address TEXT NOT NULL,
+                city TEXT NOT NULL,
+                country TEXT NOT NULL,
+                price REAL NULL,
+                status TEXT NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                recent INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+
+    def _migrate_price_column_if_needed(self, connection):
+        columns = connection.execute("PRAGMA table_info(listings)").fetchall()
+        price_column = next((column for column in columns if column[1] == "price"), None)
+
+        if not price_column or price_column[2].upper() == "REAL":
+            return
+
+        logger.info("Migrating listings.price from TEXT to REAL")
+        self._create_table(connection, table_name="listings_new")
+        connection.execute(
+            """
+            INSERT INTO listings_new (id, address, city, country, price, status, note, recent)
+            SELECT
+                id,
+                address,
+                city,
+                country,
+                CASE
+                    WHEN TRIM(COALESCE(price, '')) = '' THEN NULL
+                    ELSE CAST(price AS REAL)
+                END,
+                status,
+                note,
+                recent
+            FROM listings
+            """
+        )
+        connection.execute("DROP TABLE listings")
+        connection.execute("ALTER TABLE listings_new RENAME TO listings")
+        logger.info("Price column migration completed")
+
+    def _normalize_price(self, raw_value):
+        if raw_value in (None, ""):
+            return None
+
+        return float(str(raw_value).strip())
+
+    def _display_price(self, raw_value):
+        if raw_value is None:
+            return None
+
+        number = float(raw_value)
+        if number.is_integer():
+            return str(int(number))
+        return str(number)
+
     def _normalize_seed_items(self, items):
         normalized = []
         for index, item in enumerate(items, start=1):
@@ -289,7 +339,7 @@ class ListingStore:
                     "address": item.get("address", "").strip(),
                     "city": item.get("city", "").strip(),
                     "country": item.get("country", "").strip(),
-                    "price": str(item.get("price", "")).strip(),
+                    "price": self._normalize_price(item.get("price", "")),
                     "status": item.get("status", "FOR SALE").strip().upper(),
                     "note": item.get("note", "").strip(),
                     "recent": 1 if item.get("recent", False) else 0,
@@ -312,7 +362,7 @@ class ListingStore:
             "address": row["address"],
             "city": row["city"],
             "country": row["country"],
-            "price": row["price"],
+            "price": self._display_price(row["price"]),
             "status": row["status"],
             "note": row["note"],
             "recent": bool(row["recent"]),
@@ -405,7 +455,7 @@ class ListingStore:
                     parts[0],
                     parts[1],
                     parts[2],
-                    parts[3],
+                    self._normalize_price(parts[3]),
                     parts[4] if len(parts) > 4 else "",
                 ),
             )
