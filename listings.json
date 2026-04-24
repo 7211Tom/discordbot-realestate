@@ -1,0 +1,262 @@
+[
+  {
+    "address": "Travessa Da Povoa 263",
+    "city": "Porto",
+    "country": "Portugal",
+    "price": "3",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 1
+  },
+  {
+    "address": "111 Cornelia St",
+    "city": "Brooklyn",
+    "country": "USA",
+    "price": "",
+    "status": "SOLD",
+    "note": "",
+    "recent": false,
+    "id": 2
+  },
+  {
+    "address": "7 Rue Emile Connoy",
+    "city": "St Denis",
+    "country": "France",
+    "price": "4",
+    "status": "SOLD",
+    "note": "",
+    "recent": false,
+    "id": 3
+  },
+  {
+    "address": "25908 81St Ave",
+    "city": "Queens",
+    "country": "USA",
+    "price": "",
+    "status": "SOLD",
+    "note": "thx @Athex",
+    "recent": false,
+    "id": 4
+  },
+  {
+    "address": "58 Stoke Poges Ln",
+    "city": "Slough",
+    "country": "UK",
+    "price": "4",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 5
+  },
+  {
+    "address": "1784 SW 11TH",
+    "city": "Miami",
+    "country": "Florida, USA",
+    "price": "5",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 6
+  },
+  {
+    "address": "52 Scott's Hill Road",
+    "city": "Bermuda",
+    "country": "Bermuda",
+    "price": "",
+    "status": "SOLD",
+    "note": "",
+    "recent": false,
+    "id": 7
+  },
+  {
+    "address": "Via Muzio Oddi",
+    "city": "Rome",
+    "country": "Italy",
+    "price": "",
+    "status": "SOLD",
+    "note": "",
+    "recent": false,
+    "id": 8
+  },
+  {
+    "address": "232 New John St West",
+    "city": "Birmingham",
+    "country": "UK",
+    "price": "5",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 9
+  },
+  {
+    "address": "4 Fielders Lane",
+    "city": "Bermuda",
+    "country": "Bermuda",
+    "price": "",
+    "status": "SOLD",
+    "note": "",
+    "recent": false,
+    "id": 10
+  },
+  {
+    "address": "17 Hochstrasse",
+    "city": "Berlin",
+    "country": "Germany",
+    "price": "6",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 11
+  },
+  {
+    "address": "5412 Shippee Ln",
+    "city": "Stockton",
+    "country": "California, USA",
+    "price": "7",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 12
+  },
+  {
+    "address": "37 Via Carlo Em.",
+    "city": "Rome",
+    "country": "Italy",
+    "price": "",
+    "status": "SOLD",
+    "note": "thx @JohnFrifri",
+    "recent": false,
+    "id": 13
+  },
+  {
+    "address": "2 Chome 46 10",
+    "city": "Shibuya City, Tokyo",
+    "country": "Japan",
+    "price": "8",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 14
+  },
+  {
+    "address": "5586 Black Oak Dr",
+    "city": "Stockton",
+    "country": "California, USA",
+    "price": "8.5",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 15
+  },
+  {
+    "address": "212 New John St West",
+    "city": "Birmingham",
+    "country": "UK",
+    "price": "9",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 16
+  },
+  {
+    "address": "2323 Comstock Dr",
+    "city": "Park City",
+    "country": "Utah, USA",
+    "price": "",
+    "status": "SOLD",
+    "note": "",
+    "recent": false,
+    "id": 17
+  },
+  {
+    "address": "185 MCDONALD AVE",
+    "city": "Brooklyn",
+    "country": "NY, USA",
+    "price": "10",
+    "status": "FOR SALE",
+    "note": "park view",
+    "recent": false,
+    "id": 18
+  },
+  {
+    "address": "17 Crest View",
+    "city": "Smiths Parish",
+    "country": "Bermuda",
+    "price": "",
+    "status": "SOLD",
+    "note": "thx @Athex",
+    "recent": false,
+    "id": 19
+  },
+  {
+    "address": "93 Ilbert St",
+    "city": "London",
+    "country": "UK",
+    "price": "10",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 20
+  },
+  {
+    "address": "1 Pokio Cresent",
+    "city": "Smiths Parish",
+    "country": "Bermuda",
+    "price": "",
+    "status": "SOLD",
+    "note": "thx @Athex",
+    "recent": false,
+    "id": 21
+  },
+  {
+    "address": "8624 Musket St",
+    "city": "Bellerose, Queens",
+    "country": "USA",
+    "price": "22",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 22
+  },
+  {
+    "address": "8108 252nd St",
+    "city": "Bellerose, Queens",
+    "country": "USA",
+    "price": "",
+    "status": "SOLD",
+    "note": "thx @Shaktilyn",
+    "recent": false,
+    "id": 23
+  },
+  {
+    "address": "901B Avenue B",
+    "city": "Treasure Island, San Francisco",
+    "country": "California, USA",
+    "price": "26",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 24
+  },
+  {
+    "address": "2 Thaynex Canyon Way",
+    "city": "Park City",
+    "country": "Utah, USA",
+    "price": "45",
+    "status": "FOR SALE",
+    "note": "",
+    "recent": false,
+    "id": 25
+  },
+  {
+    "address": "8004 HICKORY ST",
+    "city": "New Orleans",
+    "country": "Louisiana",
+    "price": "$ 3",
+    "status": "SOLD",
+    "note": "",
+    "recent": true,
+    "id": 26
+  }
+]
