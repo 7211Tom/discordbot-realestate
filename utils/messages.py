@@ -1,5 +1,13 @@
 MAX_MESSAGE_LENGTH = 1900
 MAX_LINE_LENGTH = 400
+COMMANDS_OVERVIEW_TEXT = (
+    "!list\n"
+    "!sold <zoekwoord>\n"
+    "!forsale <zoekwoord>\n"
+    "!remove <id>\n"
+    "!search <zoekwoord>\n"
+    "!add adres | stad | land | prijs | optionele notitie"
+)
 
 
 def truncate_text(text, limit):

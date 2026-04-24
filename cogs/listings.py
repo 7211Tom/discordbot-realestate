@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils.guards import is_allowed_channel
-from utils.messages import send_list
+from utils.messages import COMMANDS_OVERVIEW_TEXT, send_list
 
 
 class ListingsCog(commands.Cog):
@@ -30,36 +30,13 @@ class ListingsCog(commands.Cog):
 
         await send_list(ctx, results)
 
-    @commands.command()
-    async def helpme(self, ctx):
-        if not is_allowed_channel(ctx):
-            return
-
-        help_text = (
-            "!list\n"
-            "!sold <zoekwoord>\n"
-            "!forsale <zoekwoord>\n"
-            "!remove <id>\n"
-            "!search <zoekwoord>\n"
-            "!add adres | stad | land | prijs | optionele notitie"
-        )
-        await ctx.send(f"```{help_text}```")
-
     @app_commands.command(
         name="commands",
         description="Toont een overzicht van alle beschikbare bot-commands.",
     )
     async def commands_overview(self, interaction: discord.Interaction):
-        help_text = (
-            "!list\n"
-            "!sold <zoekwoord>\n"
-            "!forsale <zoekwoord>\n"
-            "!remove <id>\n"
-            "!search <zoekwoord>\n"
-            "!add adres | stad | land | prijs | optionele notitie"
-        )
         await interaction.response.send_message(
-            f"```{help_text}```",
+            f"```{COMMANDS_OVERVIEW_TEXT}```",
             ephemeral=True,
         )
 

@@ -38,21 +38,38 @@ class ListingStore:
             logger.info("SQLite database initialized with an empty listings table")
 
     def _create_table(self, connection, table_name="listings"):
-        connection.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                address TEXT NOT NULL,
-                city TEXT NOT NULL,
-                country TEXT NOT NULL,
-                price REAL NULL,
-                status TEXT NOT NULL DEFAULT 'FOR SALE'
-                    CHECK(status IN ('FOR SALE', 'SOLD')),
-                note TEXT NOT NULL DEFAULT '',
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+        if table_name == "listings":
+            query = """
+                CREATE TABLE IF NOT EXISTS listings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    address TEXT NOT NULL,
+                    city TEXT NOT NULL,
+                    country TEXT NOT NULL,
+                    price REAL NULL,
+                    status TEXT NOT NULL DEFAULT 'FOR SALE'
+                        CHECK(status IN ('FOR SALE', 'SOLD')),
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             """
-        )
+        elif table_name == "listings_new":
+            query = """
+                CREATE TABLE IF NOT EXISTS listings_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    address TEXT NOT NULL,
+                    city TEXT NOT NULL,
+                    country TEXT NOT NULL,
+                    price REAL NULL,
+                    status TEXT NOT NULL DEFAULT 'FOR SALE'
+                        CHECK(status IN ('FOR SALE', 'SOLD')),
+                    note TEXT NOT NULL DEFAULT '',
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+        else:
+            raise ValueError(f"Unsupported table name: {table_name}")
+
+        connection.execute(query)
 
     def _migrate_schema_if_needed(self, connection):
         columns = connection.execute("PRAGMA table_info(listings)").fetchall()
