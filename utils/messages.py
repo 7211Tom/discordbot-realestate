@@ -61,8 +61,8 @@ def build_listing_line(item, recent_sold_id=None):
         else ""
     )
     line = (
-        f"`#{item['id']:03d}` {recent_badge}{status_icon} **{item['address']}** "
-        f" - {location} - {' | '.join(meta)}"
+        f"`#{item['id']:03d}` {recent_badge}{status_icon} {item['address']}"
+        f" - **{location}** - {' | '.join(meta)}"
     )
     return truncate_text(line, MAX_LINE_LENGTH)
 
