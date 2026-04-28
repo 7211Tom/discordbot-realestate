@@ -42,6 +42,8 @@ def build_listing_line(item, recent_sold_id=None):
     location = ", ".join(
         part for part in [item["city"].strip(), item["country"].strip()] if part
     )
+    if not location:
+        location = "Unknown location"
 
     meta = []
     if item["status"] == "SOLD":
@@ -51,19 +53,29 @@ def build_listing_line(item, recent_sold_id=None):
         meta.append(f"FOR SALE - **$ {price}**")
 
     if item["note"]:
-        meta.append(item["note"])
+        meta.append(f"*{item['note']}*")
 
     recent_badge = (
         "`RECENT` "
         if item["status"] == "SOLD" and item["id"] == recent_sold_id
         else ""
     )
-    line = f"`#{item['id']}` {recent_badge}{status_icon} {item['address']} - **{location}** - {' | '.join(meta)}"
+    line = (
+        f"`#{item['id']:03d}` {recent_badge}{status_icon} **{item['address']}** "
+        f" - {location} - {' | '.join(meta)}"
+    )
     return truncate_text(line, MAX_LINE_LENGTH)
 
 
 def build_notice_embed(title, description, color=EMBED_COLOR):
     return discord.Embed(title=title, description=description, color=color)
+
+
+def build_board_summary(items):
+    total = len(items)
+    sold = sum(1 for item in items if item["status"] == "SOLD")
+    for_sale = total - sold
+    return f"{for_sale} for sale | {sold} sold | {total} total"
 
 
 def build_list_messages(items, title="UPDATE"):
@@ -97,6 +109,7 @@ def build_list_embeds(items, title="Listings"):
         return [build_notice_embed("Listings", "The listing board is empty.")]
 
     recent_sold_id = get_recent_sold_id(items)
+    summary = build_board_summary(items)
     embeds = []
     current_lines = []
     current_length = 0
@@ -106,13 +119,13 @@ def build_list_embeds(items, title="Listings"):
         line_length = len(line) + 1
 
         if current_lines and current_length + line_length > MAX_EMBED_DESCRIPTION_LENGTH:
-            embeds.append(
-                discord.Embed(
-                    title=title,
-                    description="\n".join(current_lines),
-                    color=EMBED_COLOR,
-                )
+            embed = discord.Embed(
+                title=title,
+                description="\n".join(current_lines),
+                color=EMBED_COLOR,
             )
+            embed.add_field(name="Board Summary", value=summary, inline=False)
+            embeds.append(embed)
             current_lines = []
             current_length = 0
 
@@ -120,13 +133,18 @@ def build_list_embeds(items, title="Listings"):
         current_length += line_length
 
     if current_lines:
-        embeds.append(
-            discord.Embed(
-                title=title,
-                description="\n".join(current_lines),
-                color=EMBED_COLOR,
-            )
+        embed = discord.Embed(
+            title=title,
+            description="\n".join(current_lines),
+            color=EMBED_COLOR,
         )
+        embed.add_field(name="Board Summary", value=summary, inline=False)
+        embeds.append(embed)
+
+    page_count = len(embeds)
+    for index, embed in enumerate(embeds, start=1):
+        embed.set_footer(text=f"Listing Board | Page {index}/{page_count}")
+        embed.timestamp = discord.utils.utcnow()
 
     return embeds
 
