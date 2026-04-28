@@ -10,6 +10,7 @@ EMBED_COLOR = discord.Color.gold()
 COMMANDS_OVERVIEW_TEXT = (
     "/list\n"
     "/search keyword:<keyword>\n"
+    "/public_list\n"
     "/add address:<address> city:<city> country:<country> price:<price> note:<note>\n"
     "/sold keyword:<keyword>\n"
     "/forsale keyword:<keyword>\n"
