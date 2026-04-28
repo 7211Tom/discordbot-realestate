@@ -2,41 +2,67 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils.guards import is_allowed_channel
-from utils.messages import COMMANDS_OVERVIEW_TEXT, send_list
+from utils.guards import ensure_interaction_channel, ensure_interaction_editor
+from utils.messages import (
+    COMMANDS_OVERVIEW_TEXT,
+    build_notice_embed,
+    send_private_list,
+)
 
 
 class ListingsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="list")
-    async def list_command(self, ctx):
-        if not is_allowed_channel(ctx):
+    @app_commands.command(
+        name="list",
+        description="Show the current listing board.",
+    )
+    async def slash_list(self, interaction: discord.Interaction):
+        if not await ensure_interaction_channel(interaction):
             return
 
-        await send_list(ctx)
+        await send_private_list(interaction)
 
-    @commands.command()
-    async def search(self, ctx, *, keyword):
-        if not is_allowed_channel(ctx):
+    @app_commands.command(
+        name="search",
+        description="Search listings by address, city, country, status, or note.",
+    )
+    async def slash_search(self, interaction: discord.Interaction, keyword: str):
+        if not await ensure_interaction_channel(interaction):
             return
 
         results = self.bot.store.search(keyword)
 
         if not results:
-            await ctx.send(f"Geen resultaten gevonden voor '{keyword}'.")
+            await interaction.response.send_message(
+                embed=build_notice_embed(
+                    "No Results",
+                    f"No listings found for '{keyword}'.",
+                ),
+                ephemeral=True,
+            )
             return
 
-        await send_list(ctx, results)
+        await send_private_list(interaction, results, title="Search Results")
 
     @app_commands.command(
         name="commands",
-        description="Toont een overzicht van alle beschikbare bot-commands.",
+        description="Show all available bot commands.",
     )
+    @app_commands.default_permissions(administrator=True)
     async def commands_overview(self, interaction: discord.Interaction):
+        if not await ensure_interaction_channel(interaction):
+            return
+
+        if not await ensure_interaction_editor(interaction):
+            return
+
         await interaction.response.send_message(
-            f"```{COMMANDS_OVERVIEW_TEXT}```",
+            embed=build_notice_embed(
+                "Commands",
+                f"```{COMMANDS_OVERVIEW_TEXT}```",
+            ),
             ephemeral=True,
         )
 

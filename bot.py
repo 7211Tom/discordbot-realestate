@@ -5,8 +5,9 @@ from logging.handlers import RotatingFileHandler
 import discord
 from discord.ext import commands
 
-from config import ALLOWED_CHANNEL_NAME, DB_FILE, GUILD_ID, TOKEN
+from config import ALLOWED_CHANNEL_NAME, DB_FILE, GUILD_ID, OWNER_DISCORD_ID, TOKEN
 from data.listings import ListingStore
+from utils.messages import build_notice_embed
 
 
 LOG_DIR = "logs"
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 class RealEstateBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
-        intents.message_content = True
+        intents.message_content = False
         super().__init__(command_prefix="!", intents=intents)
         self.store = ListingStore()
         logger.info("Bot initialized with database %s", DB_FILE)
@@ -67,16 +68,31 @@ class RealEstateBot(commands.Bot):
             return
 
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("Er ontbreekt invoer voor dit commando. Gebruik !helpme voor hulp.")
+            await ctx.send(
+                embed=build_notice_embed(
+                    "Missing Input",
+                    "This command needs more input. Use /commands for help.",
+                )
+            )
             return
 
         if isinstance(error, commands.BadArgument):
-            await ctx.send("Ongeldige invoer voor dit commando. Gebruik !helpme voor het juiste formaat.")
+            await ctx.send(
+                embed=build_notice_embed(
+                    "Invalid Input",
+                    "The input format is invalid. Use /commands for help.",
+                )
+            )
             return
 
         original = getattr(error, "original", error)
         logger.exception("Unhandled command error in %s", ctx.command, exc_info=original)
-        await ctx.send("Er ging iets mis bij het uitvoeren van dit commando. Probeer het opnieuw.")
+        await ctx.send(
+            embed=build_notice_embed(
+                "Command Failed",
+                "Something went wrong while running this command. Please try again.",
+            )
+        )
 
 
 bot = RealEstateBot()
@@ -84,8 +100,9 @@ bot = RealEstateBot()
 
 @bot.event
 async def on_ready():
-    logger.info("Bot is online als %s", bot.user)
+    logger.info("Bot is online as %s", bot.user)
     logger.info("Allowed channel is %s", ALLOWED_CHANNEL_NAME)
+    logger.info("Owner Discord ID is %s", OWNER_DISCORD_ID or "not set")
 
 
 bot.run(TOKEN, log_handler=None)

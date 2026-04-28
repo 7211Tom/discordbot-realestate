@@ -16,7 +16,7 @@ def load_dotenv(path=".env"):
             key = key.strip()
             value = value.strip().strip('"').strip("'")
 
-            if key and key not in os.environ:
+            if key:
                 os.environ[key] = value
 
 
@@ -28,9 +28,11 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OWNER_DISCORD_ID = os.getenv("OWNER_DISCORD_ID")
 GUILD_ID = os.getenv("GUILD_ID")
 ALLOWED_CHANNEL_NAME = os.getenv("ALLOWED_CHANNEL_NAME", "for-sale💰").strip()
+FOR_SALE_INDICATOR = os.getenv("FOR_SALE_INDICATOR", "🟢").strip()
+SOLD_INDICATOR = os.getenv("SOLD_INDICATOR", "🔴").strip()
 DB_FILE = os.path.join(DATA_DIR, "listings.db")
 
 if not TOKEN:
     raise RuntimeError(
-        "DISCORD_BOT_TOKEN ontbreekt. Zet je token in het .env bestand."
+        "DISCORD_BOT_TOKEN is missing. Set your token in the .env file."
     )

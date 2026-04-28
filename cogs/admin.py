@@ -1,95 +1,180 @@
+import discord
+from discord import app_commands
 from discord.ext import commands
 
-from utils.guards import ensure_editor, is_allowed_channel
-from utils.messages import send_list
+import logging
+
+from utils.guards import (
+    ensure_interaction_channel,
+    ensure_interaction_editor,
+)
+from utils.messages import build_notice_embed, send_private_list
+
+
+logger = logging.getLogger(__name__)
 
 
 class AdminCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command()
-    async def add(self, ctx, *, text):
-        if not is_allowed_channel(ctx):
+    @app_commands.command(
+        name="add",
+        description="Add a listing to the board.",
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def slash_add(
+        self,
+        interaction: discord.Interaction,
+        address: str,
+        city: str,
+        country: str,
+        price: str,
+        note: str = "",
+    ):
+        if not await ensure_interaction_channel(interaction):
             return
 
-        if not await ensure_editor(ctx):
+        if not await ensure_interaction_editor(interaction):
             return
 
-        if "|" in text:
-            parts = [part.strip() for part in text.split("|")]
-        else:
-            parts = [part.strip() for part in text.split(",")]
-
-        if len(parts) < 4:
-            await ctx.send(
-                "Gebruik: !add adres | stad | land | prijs | optionele notitie"
-            )
-            return
+        logger.info(
+            "Admin command /add invoked by %s (%s)",
+            interaction.user,
+            interaction.user.id,
+        )
 
         try:
-            listing = self.bot.store.add_listing(parts)
+            listing = self.bot.store.add_listing([address, city, country, price, note])
         except ValueError:
-            await ctx.send(
-                "Ongeldige prijs. Gebruik alleen cijfers, bijvoorbeeld 250000 of 250000.50."
+            await interaction.response.send_message(
+                embed=build_notice_embed(
+                    "Invalid Price",
+                    "Use numbers only, for example 250000 or 250000.50.",
+                ),
+                ephemeral=True,
             )
             return
 
-        await ctx.send(f"Toegevoegd: #{listing['id']} {listing['address']}")
-        await send_list(ctx)
+        await interaction.response.send_message(
+            embed=build_notice_embed(
+                "Listing Added",
+                f"#{listing['id']} {listing['address']}",
+            ),
+            ephemeral=True,
+        )
+        await send_private_list(interaction)
 
-    @commands.command()
-    async def sold(self, ctx, *, keyword):
-        if not is_allowed_channel(ctx):
+    @app_commands.command(
+        name="sold",
+        description="Mark a listing as sold.",
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def slash_sold(self, interaction: discord.Interaction, keyword: str):
+        if not await ensure_interaction_channel(interaction):
             return
 
-        if not await ensure_editor(ctx):
+        if not await ensure_interaction_editor(interaction):
             return
+
+        logger.info(
+            "Admin command /sold invoked by %s (%s)",
+            interaction.user,
+            interaction.user.id,
+        )
 
         item = self.bot.store.mark_sold(keyword)
 
         if not item:
-            await ctx.send(f"Geen match gevonden voor '{keyword}'.")
+            await interaction.response.send_message(
+                embed=build_notice_embed(
+                    "No Match",
+                    f"No for-sale listing found for '{keyword}'.",
+                ),
+                ephemeral=True,
+            )
             return
 
-        await ctx.send(f"Gemarkeerd als SOLD: {item['address']}")
-        await send_list(ctx)
+        await interaction.response.send_message(
+            embed=build_notice_embed("Marked Sold", item["address"]),
+            ephemeral=True,
+        )
+        await send_private_list(interaction)
 
-    @commands.command()
-    async def forsale(self, ctx, *, keyword):
-        if not is_allowed_channel(ctx):
+    @app_commands.command(
+        name="forsale",
+        description="Mark a sold listing as for sale.",
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def slash_forsale(self, interaction: discord.Interaction, keyword: str):
+        if not await ensure_interaction_channel(interaction):
             return
 
-        if not await ensure_editor(ctx):
+        if not await ensure_interaction_editor(interaction):
             return
+
+        logger.info(
+            "Admin command /forsale invoked by %s (%s)",
+            interaction.user,
+            interaction.user.id,
+        )
 
         item = self.bot.store.mark_for_sale(keyword)
 
         if not item:
-            await ctx.send(f"Geen verkochte match gevonden voor '{keyword}'.")
-            return
-
-        await ctx.send(f"Terug op FOR SALE: {item['address']}")
-        await send_list(ctx)
-
-    @commands.command(name="remove")
-    async def remove_listing(self, ctx, listing_id: str):
-        if not is_allowed_channel(ctx):
-            return
-
-        if not await ensure_editor(ctx):
-            return
-
-        item = self.bot.store.remove_listing(listing_id)
-
-        if not item:
-            await ctx.send(
-                "Geen geldige ID gevonden. Gebruik eerst !list of !search en daarna bv. !remove 7"
+            await interaction.response.send_message(
+                embed=build_notice_embed(
+                    "No Sold Match",
+                    f"No sold listing found for '{keyword}'.",
+                ),
+                ephemeral=True,
             )
             return
 
-        await ctx.send(f"Verwijderd: #{item['id']} {item['address']}")
-        await send_list(ctx)
+        await interaction.response.send_message(
+            embed=build_notice_embed("Marked For Sale", item["address"]),
+            ephemeral=True,
+        )
+        await send_private_list(interaction)
+
+    @app_commands.command(
+        name="remove",
+        description="Remove a listing from the board.",
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def slash_remove(self, interaction: discord.Interaction, listing_id: int):
+        if not await ensure_interaction_channel(interaction):
+            return
+
+        if not await ensure_interaction_editor(interaction):
+            return
+
+        logger.info(
+            "Admin command /remove invoked by %s (%s)",
+            interaction.user,
+            interaction.user.id,
+        )
+
+        item = self.bot.store.remove_listing(str(listing_id))
+
+        if not item:
+            await interaction.response.send_message(
+                embed=build_notice_embed(
+                    "Invalid ID",
+                    "No valid listing ID found. Use /list or /search first.",
+                ),
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.send_message(
+            embed=build_notice_embed(
+                "Listing Removed",
+                f"#{item['id']} {item['address']}",
+            ),
+            ephemeral=True,
+        )
+        await send_private_list(interaction)
 
 
 async def setup(bot):

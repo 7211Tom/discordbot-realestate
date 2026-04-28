@@ -5,4 +5,5 @@ __pycache__/
 *.db-journal
 *.sqlite3
 logs/
-
+.compile_check/
+.pycache_tmp/

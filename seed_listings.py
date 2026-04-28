@@ -47,7 +47,7 @@ def load_json(path):
         items = json.load(json_file)
 
     if not isinstance(items, list):
-        raise ValueError(f"{path} moet een JSON-lijst bevatten.")
+        raise ValueError(f"{path} must contain a JSON list.")
 
     return items
 
@@ -65,8 +65,8 @@ def seed_database(json_file, db_file, force=False):
 
         if existing_count and not force:
             raise RuntimeError(
-                f"Database bevat al {existing_count} listings. "
-                "Gebruik --force als je de tabel eerst wil leegmaken."
+                f"Database already contains {existing_count} listings. "
+                "Use --force if you want to clear the table first."
             )
 
         if force:
@@ -132,20 +132,20 @@ def seed_database(json_file, db_file, force=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Vul data/listings.db met data uit listings.json."
+        description="Seed data/listings.db from listings.json."
     )
-    parser.add_argument("--json", default=DEFAULT_JSON_FILE, help="Pad naar listings.json")
-    parser.add_argument("--db", default=DEFAULT_DB_FILE, help="Pad naar listings.db")
+    parser.add_argument("--json", default=DEFAULT_JSON_FILE, help="Path to listings.json")
+    parser.add_argument("--db", default=DEFAULT_DB_FILE, help="Path to listings.db")
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Maak de listings-tabel eerst leeg als er al data in zit.",
+        help="Clear the listings table first if it already contains data.",
     )
     args = parser.parse_args()
 
     imported_count, skipped_count = seed_database(args.json, args.db, args.force)
-    print(f"Geimporteerd: {imported_count} listings")
-    print(f"Overgeslagen: {skipped_count} items")
+    print(f"Imported: {imported_count} listings")
+    print(f"Skipped: {skipped_count} items")
     print(f"Database: {args.db}")
 
 
