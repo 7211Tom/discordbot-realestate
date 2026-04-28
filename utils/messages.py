@@ -170,21 +170,13 @@ async def send_interaction_list(
         await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
 
-async def send_public_list(interaction, items_to_show=None, title="UPDATE"):
-    items = (
-        items_to_show
-        if items_to_show is not None
-        else interaction.client.store.listings
+async def send_public_list(interaction, items_to_show=None, title="Listings"):
+    await send_interaction_list(
+        interaction,
+        items_to_show=items_to_show,
+        title=title,
+        ephemeral=False,
     )
-    chunks = build_list_messages(items, title=title)
-
-    if interaction.response.is_done():
-        await interaction.followup.send(chunks[0])
-    else:
-        await interaction.response.send_message(chunks[0])
-
-    for chunk in chunks[1:]:
-        await interaction.followup.send(chunk)
 
 
 async def send_private_list(interaction, items_to_show=None, title="Listings"):

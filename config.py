@@ -22,10 +22,20 @@ def load_dotenv(path=".env"):
 
 load_dotenv()
 
+
+def parse_csv_env(value):
+    if not value:
+        return []
+    return [part.strip() for part in value.split(",") if part.strip()]
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OWNER_DISCORD_ID = os.getenv("OWNER_DISCORD_ID")
+OWNER_DISCORD_IDS = parse_csv_env(os.getenv("OWNER_DISCORD_IDS"))
+if OWNER_DISCORD_ID and OWNER_DISCORD_ID.strip():
+    OWNER_DISCORD_IDS = [OWNER_DISCORD_ID.strip(), *OWNER_DISCORD_IDS]
+OWNER_DISCORD_IDS = tuple(dict.fromkeys(OWNER_DISCORD_IDS))
 GUILD_ID = os.getenv("GUILD_ID")
 ALLOWED_CHANNEL_NAME = os.getenv("ALLOWED_CHANNEL_NAME", "for-sale💰").strip()
 FOR_SALE_INDICATOR = os.getenv("FOR_SALE_INDICATOR", "🟢").strip()

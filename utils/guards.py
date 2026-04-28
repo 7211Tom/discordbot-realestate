@@ -1,4 +1,4 @@
-from config import ALLOWED_CHANNEL_NAME, OWNER_DISCORD_ID
+from config import ALLOWED_CHANNEL_NAME, OWNER_DISCORD_IDS
 from utils.messages import build_notice_embed
 
 
@@ -7,10 +7,10 @@ def is_allowed_interaction_channel(interaction):
 
 
 def interaction_user_can_edit(interaction):
-    if not OWNER_DISCORD_ID:
+    if not OWNER_DISCORD_IDS:
         return False
 
-    return str(interaction.user.id) == OWNER_DISCORD_ID.strip()
+    return str(interaction.user.id) in OWNER_DISCORD_IDS
 
 
 async def ensure_interaction_channel(interaction):
@@ -31,11 +31,11 @@ async def ensure_interaction_editor(interaction):
     if interaction_user_can_edit(interaction):
         return True
 
-    if not OWNER_DISCORD_ID:
+    if not OWNER_DISCORD_IDS:
         await interaction.response.send_message(
             embed=build_notice_embed(
                 "Editing Disabled",
-                "Set OWNER_DISCORD_ID in your .env file to edit the listing board.",
+                "Set OWNER_DISCORD_ID or OWNER_DISCORD_IDS in your .env file to edit the listing board.",
             ),
             ephemeral=True,
         )
